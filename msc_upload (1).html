@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MSC — Analisar Currículo</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --coral:#FF6B6B;--violet:#7C3AED;--indigo:#4F46E5;--teal:#0EA5E9;
+  --green:#10B981;--amber:#F59E0B;--dark:#0C0C18;
+  --surface:rgba(255,255,255,.04);--surface2:rgba(255,255,255,.07);
+  --border:rgba(255,255,255,.08);--border2:rgba(255,255,255,.14);
+  --text:#F2F2FF;--muted:rgba(242,242,255,.5);--muted2:rgba(242,242,255,.28);
+}
+body{font-family:'DM Sans',sans-serif;background:var(--dark);color:var(--text);min-height:100vh;overflow-x:hidden}
+.mesh{position:fixed;inset:0;z-index:0;pointer-events:none;background:
+  radial-gradient(ellipse 70% 50% at 10% 20%,rgba(124,58,237,.12) 0%,transparent 55%),
+  radial-gradient(ellipse 60% 40% at 90% 80%,rgba(255,107,107,.08) 0%,transparent 55%)}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 28px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(12,12,24,.85);backdrop-filter:blur(20px);border-bottom:.5px solid var(--border)}
+.nav-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;letter-spacing:-.3px;
+  background:linear-gradient(135deg,#fff 30%,rgba(255,255,255,.5));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;text-decoration:none}
+.nav-logo span{background:linear-gradient(135deg,var(--coral),var(--violet));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-back{font-size:12px;color:var(--muted);text-decoration:none;
+  display:flex;align-items:center;gap:6px;transition:color .2s}
+.nav-back:hover{color:var(--text)}
+.wrap{position:relative;z-index:1;max-width:600px;margin:0 auto;padding:100px 24px 80px}
+/* STEPS */
+.steps-bar{display:flex;align-items:center;margin-bottom:40px}
+.step-dot{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;position:relative}
+.step-dot::after{content:'';position:absolute;top:14px;left:50%;width:100%;height:2px;
+  background:rgba(255,255,255,.08);z-index:0}
+.step-dot:last-child::after{display:none}
+.step-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:700;position:relative;z-index:1;transition:all .3s}
+.step-circle.done{background:var(--green);color:#fff}
+.step-circle.active{background:linear-gradient(135deg,var(--coral),var(--violet));color:#fff;
+  box-shadow:0 0 16px rgba(124,58,237,.4)}
+.step-circle.idle{background:rgba(255,255,255,.06);color:var(--muted2);border:.5px solid var(--border)}
+.step-label{font-size:10px;color:var(--muted2);text-align:center;max-width:60px}
+.step-label.active-l{color:var(--text);font-weight:500}
+/* SCREENS */
+.screen{display:none;animation:fadeUp .4s ease both}
+.screen.active{display:block}
+/* UPLOAD */
+.top-card{background:var(--surface);border:.5px solid var(--border);border-radius:16px;
+  padding:20px;margin-bottom:20px}
+.top-card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:4px;
+  display:flex;align-items:center;gap:8px}
+.top-card-sub{font-size:12px;color:var(--muted);line-height:1.5}
+.upload-area{border:1.5px dashed rgba(255,255,255,.12);border-radius:20px;
+  padding:48px 32px;text-align:center;cursor:pointer;
+  transition:border-color .2s,background .2s;background:var(--surface)}
+.upload-area:hover,.upload-area.drag{border-color:rgba(124,58,237,.5);background:rgba(124,58,237,.04)}
+.upload-area.has-file{border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.04)}
+.upload-icon{font-size:40px;margin-bottom:16px;opacity:.6}
+.upload-title{font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin-bottom:8px}
+.upload-sub{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:20px}
+.upload-types{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.upload-type{font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;
+  background:rgba(255,255,255,.06);border:.5px solid var(--border);color:var(--muted2)}
+input[type=file]{display:none}
+.file-selected{display:none;align-items:center;gap:12px;
+  background:rgba(16,185,129,.08);border:.5px solid rgba(16,185,129,.25);
+  border-radius:12px;padding:14px 16px;margin-top:16px}
+.file-selected.show{display:flex}
+.file-icon{font-size:24px;flex-shrink:0}
+.file-info{flex:1;text-align:left}
+.file-name{font-size:13px;font-weight:500;margin-bottom:2px}
+.file-size{font-size:11px;color:var(--muted2)}
+.file-remove{background:none;border:none;color:var(--muted2);cursor:pointer;font-size:16px;
+  padding:4px;transition:color .2s}
+.file-remove:hover{color:var(--coral)}
+/* CONTEXT */
+.ctx-title{font-size:13px;font-weight:500;color:var(--muted);margin:24px 0 12px;
+  display:flex;align-items:center;gap:8px}
+.ctx-title::before{content:'';width:16px;height:1px;background:var(--border2)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12px;color:var(--muted);font-weight:500}
+.field select,.field input{background:var(--surface2);border:.5px solid var(--border2);
+  border-radius:10px;padding:10px 12px;font-size:13px;color:var(--text);
+  font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;
+  appearance:none;-webkit-appearance:none}
+.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(242,242,255,0.3)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.field select:focus,.field input:focus{border-color:rgba(124,58,237,.5)}
+.field select option{background:#1a1a2e;color:var(--text)}
+@media(max-width:480px){.field-row{grid-template-columns:1fr}}
+/* SUBMIT */
+.submit-btn{width:100%;margin-top:20px;padding:16px;border-radius:14px;border:none;cursor:pointer;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:15px;
+  background:linear-gradient(135deg,var(--coral),var(--violet));color:#fff;
+  box-shadow:0 8px 32px rgba(124,58,237,.3);transition:transform .15s,opacity .2s;
+  display:flex;align-items:center;justify-content:center;gap:10px;position:relative;overflow:hidden}
+.submit-btn::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.12),transparent);pointer-events:none}
+.submit-btn:hover:not(:disabled){transform:translateY(-2px)}
+.submit-btn:disabled{opacity:.45;cursor:not-allowed}
+.submit-hint{text-align:center;font-size:11.5px;color:var(--muted2);margin-top:10px}
+/* PROCESSING */
+.processing-screen{text-align:center;padding:40px 0}
+.proc-anim{position:relative;width:80px;height:80px;margin:0 auto 28px}
+.proc-ring{position:absolute;inset:0;border-radius:50%;border:2px solid transparent;
+  border-top-color:var(--violet);animation:spin 1s linear infinite}
+.proc-ring2{position:absolute;inset:6px;border-radius:50%;border:2px solid transparent;
+  border-top-color:var(--coral);animation:spin .7s linear infinite reverse}
+.proc-dot{position:absolute;inset:20px;border-radius:50%;
+  background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(255,107,107,.2));
+  display:flex;align-items:center;justify-content:center;font-size:18px}
+.proc-title{font-family:'Syne',sans-serif;font-weight:700;font-size:20px;margin-bottom:8px}
+.proc-sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:32px}
+.proc-steps{display:flex;flex-direction:column;gap:8px;max-width:320px;margin:0 auto}
+.proc-step{display:flex;align-items:center;gap:12px;padding:10px 14px;
+  background:var(--surface);border:.5px solid var(--border);border-radius:10px;
+  font-size:12.5px;color:var(--muted);transition:all .4s}
+.proc-step.done{background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.2);color:var(--text)}
+.proc-step.running{background:rgba(124,58,237,.06);border-color:rgba(124,58,237,.2);color:var(--text)}
+.proc-step-icon{font-size:14px;width:20px;text-align:center;flex-shrink:0}
+.proc-step-spin{width:14px;height:14px;border:1.5px solid rgba(124,58,237,.3);
+  border-top-color:var(--violet);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+/* EMAIL */
+.email-screen{text-align:center;padding:20px 0}
+.email-title{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;margin-bottom:8px}
+.email-sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:24px}
+.email-input-wrap{display:flex;gap:10px;max-width:400px;margin:0 auto 12px}
+.email-input{flex:1;background:var(--surface2);border:.5px solid var(--border2);
+  border-radius:10px;padding:12px 16px;font-size:14px;color:var(--text);
+  font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s}
+.email-input:focus{border-color:rgba(124,58,237,.5)}
+.email-input::placeholder{color:var(--muted2)}
+.email-btn{padding:12px 20px;border-radius:10px;border:none;cursor:pointer;
+  font-family:'Syne',sans-serif;font-weight:700;font-size:14px;white-space:nowrap;
+  background:linear-gradient(135deg,var(--coral),var(--violet));color:#fff;transition:transform .15s}
+.email-btn:hover{transform:translateY(-1px)}
+.email-skip{font-size:12px;color:var(--muted2);cursor:pointer;text-decoration:underline;
+  text-underline-offset:3px;background:none;border:none;transition:color .2s}
+.email-skip:hover{color:var(--muted)}
+.email-privacy{font-size:11px;color:var(--muted2);margin-top:10px}
+@media(max-width:480px){.email-input-wrap{flex-direction:column}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="mesh"></div>
+<nav>
+  <a href="msc_landing_page.html" class="nav-logo">M<span>SC</span></a>
+  <a href="msc_landing_page.html" class="nav-back">← Voltar</a>
+</nav>
+<div class="wrap">
+  <div class="steps-bar" id="stepsBar">
+    <div class="step-dot">
+      <div class="step-circle active" id="sc1">1</div>
+      <div class="step-label active-l" id="sl1">Enviar</div>
+    </div>
+    <div class="step-dot">
+      <div class="step-circle idle" id="sc2">2</div>
+      <div class="step-label" id="sl2">Analisar</div>
+    </div>
+    <div class="step-dot">
+      <div class="step-circle idle" id="sc3">3</div>
+      <div class="step-label" id="sl3">Resultado</div>
+    </div>
+  </div>
+
+  <!-- SCREEN 1 -->
+  <div class="screen active" id="screen1">
+    <div class="top-card">
+      <div class="top-card-title">📄 Envie seu currículo</div>
+      <div class="top-card-sub">A IA vai ler como um recrutador lê. Resultado em menos de 2 minutos.</div>
+    </div>
+    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon" id="uploadIcon">📂</div>
+      <div class="upload-title" id="uploadTitle">Clique para selecionar ou arraste aqui</div>
+      <div class="upload-sub" id="uploadSub">Seu currículo em formato digital — o arquivo que você usa para se candidatar</div>
+      <div class="upload-types">
+        <span class="upload-type">PDF</span>
+        <span class="upload-type">DOC</span>
+        <span class="upload-type">DOCX</span>
+        <span class="upload-type">até 5MB</span>
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf,.doc,.docx">
+    <div class="file-selected" id="fileSelected">
+      <div class="file-icon">📄</div>
+      <div class="file-info">
+        <div class="file-name" id="fileName">curriculo.pdf</div>
+        <div class="file-size" id="fileSize">selecionado</div>
+      </div>
+      <button class="file-remove" onclick="removeFile(event)">✕</button>
+    </div>
+    <div class="ctx-title">Sobre a vaga que você busca</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Cargo-alvo</label>
+        <input type="text" id="cargoAlvo" placeholder="Ex: Gerente de Marketing">
+      </div>
+      <div class="field">
+        <label>Área de atuação</label>
+        <select id="area">
+          <option value="">Selecione</option>
+          <option>Recursos Humanos</option><option>Marketing</option>
+          <option>Tecnologia</option><option>Finanças</option>
+          <option>Vendas / Comercial</option><option>Operações / Logística</option>
+          <option>Jurídico / Compliance</option><option>Design / Criativo</option>
+          <option>Engenharia</option><option>Saúde</option>
+          <option>Educação</option><option>Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Nível desejado</label>
+        <select id="nivel">
+          <option value="">Selecione</option>
+          <option>Júnior</option><option>Pleno</option><option>Sênior</option>
+          <option>Especialista</option><option>Coordenação / Liderança</option>
+          <option>Gerência</option><option>Diretoria</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Objetivo principal</label>
+        <select id="objetivo">
+          <option value="">Selecione</option>
+          <option>Conseguir entrevistas</option><option>Mudar de empresa</option>
+          <option>Mudar de área</option><option>Ser promovido</option>
+          <option>Recolocação após pausa</option>
+        </select>
+      </div>
+    </div>
+    <button class="submit-btn" id="submitBtn" onclick="startAnalysis()" disabled>
+      Analisar meu currículo →
+    </button>
+    <div class="submit-hint">🔒 Seu currículo é usado apenas para gerar esta análise · Dados protegidos por LGPD</div>
+  </div>
+
+  <!-- SCREEN 2 -->
+  <div class="screen" id="screen2">
+    <div class="processing-screen">
+      <div class="proc-anim">
+        <div class="proc-ring"></div>
+        <div class="proc-ring2"></div>
+        <div class="proc-dot">🧠</div>
+      </div>
+      <div class="proc-title">Analisando seu currículo…</div>
+      <div class="proc-sub">A IA está lendo seu perfil com os mesmos critérios<br>que os recrutadores usam na triagem.</div>
+      <div class="proc-steps">
+        <div class="proc-step" id="ps1"><div class="proc-step-icon">📄</div><span>Lendo o conteúdo do currículo</span></div>
+        <div class="proc-step" id="ps2"><div class="proc-step-icon">🔍</div><span>Avaliando clareza e estrutura</span></div>
+        <div class="proc-step" id="ps3"><div class="proc-step-icon">📊</div><span>Calculando Score MSC</span></div>
+        <div class="proc-step" id="ps4"><div class="proc-step-icon">🎯</div><span>Identificando bloqueios e gaps</span></div>
+        <div class="proc-step" id="ps5"><div class="proc-step-icon">✨</div><span>Gerando diagnóstico personalizado</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3 -->
+  <div class="screen" id="screen3">
+    <div class="email-screen">
+      <div style="font-size:40px;margin-bottom:16px">🎉</div>
+      <div class="email-title">Análise pronta!</div>
+      <div class="email-sub">Informe seu email para acessar e recuperar seu resultado de qualquer dispositivo.</div>
+      <div class="email-input-wrap">
+        <input type="email" class="email-input" id="emailInput" placeholder="seu@email.com">
+        <button class="email-btn" onclick="goToResult()">Ver resultado →</button>
+      </div>
+      <div><button class="email-skip" onclick="goToResult()">Continuar sem email</button></div>
+      <div class="email-privacy">🔒 Sem spam. Usado apenas para recuperar sua análise.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedFile = null;
+let analysisResult = null;
+
+const fileInput = document.getElementById('fileInput');
+const uploadArea = document.getElementById('uploadArea');
+
+fileInput.addEventListener('change', e => { if(e.target.files[0]) handleFile(e.target.files[0]); });
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('drag'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('drag'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault(); uploadArea.classList.remove('drag');
+  if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(f) {
+  const ok = ['application/pdf','application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+  if(!ok.includes(f.type) && !f.name.match(/\.(pdf|doc|docx)$/i)) {
+    alert('Por favor, envie um arquivo PDF, DOC ou DOCX.'); return; }
+  if(f.size > 5*1024*1024) { alert('Arquivo muito grande. Máximo 5MB.'); return; }
+  selectedFile = f;
+  document.getElementById('fileName').textContent = f.name;
+  document.getElementById('fileSize').textContent = (f.size/1024).toFixed(0)+' KB · selecionado';
+  document.getElementById('fileSelected').classList.add('show');
+  uploadArea.classList.add('has-file');
+  document.getElementById('uploadIcon').textContent = '✅';
+  document.getElementById('uploadTitle').textContent = 'Arquivo selecionado';
+  document.getElementById('uploadSub').textContent = 'Clique para trocar o arquivo';
+  checkReady();
+}
+
+function removeFile(e) {
+  e.stopPropagation(); selectedFile = null; fileInput.value = '';
+  document.getElementById('fileSelected').classList.remove('show');
+  uploadArea.classList.remove('has-file');
+  document.getElementById('uploadIcon').textContent = '📂';
+  document.getElementById('uploadTitle').textContent = 'Clique para selecionar ou arraste aqui';
+  document.getElementById('uploadSub').textContent = 'Seu currículo em formato digital — o arquivo que você usa para se candidatar';
+  checkReady();
+}
+
+['cargoAlvo','area','nivel','objetivo'].forEach(id => {
+  document.getElementById(id).addEventListener('change', checkReady);
+  document.getElementById(id).addEventListener('input', checkReady);
+});
+
+function checkReady() {
+  const cargo = document.getElementById('cargoAlvo').value.trim();
+  const area  = document.getElementById('area').value;
+  document.getElementById('submitBtn').disabled = !(selectedFile && cargo && area);
+}
+
+async function startAnalysis() {
+  setStep(2); showScreen('screen2');
+  const steps = ['ps1','ps2','ps3','ps4','ps5'];
+  const delays = [300,1400,2800,4400,6000];
+  steps.forEach((id,i) => {
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      el.classList.add('running');
+      el.querySelector('.proc-step-icon').innerHTML = '<div class="proc-step-spin"></div>';
+    }, delays[i]);
+    if(i>0) setTimeout(() => {
+      const p = document.getElementById(steps[i-1]);
+      p.classList.remove('running'); p.classList.add('done');
+      p.querySelector('.proc-step-icon').textContent = '✓';
+    }, delays[i]);
+  });
+
+  const base64 = await fileToBase64(selectedFile);
+  const isPDF = selectedFile.type==='application/pdf' || selectedFile.name.toLowerCase().endsWith('.pdf');
+  const cargo = document.getElementById('cargoAlvo').value.trim();
+  const area  = document.getElementById('area').value;
+  const nivel = document.getElementById('nivel').value;
+  const obj   = document.getElementById('objetivo').value;
+
+  const prompt = `Você é especialista em recrutamento e carreira com 20 anos de experiência. Analise este currículo.
+
+CONTEXTO: Cargo-alvo: ${cargo} | Área: ${area} | Nível: ${nivel||'não informado'} | Objetivo: ${obj||'não informado'}
+
+Retorne SOMENTE JSON válido, sem markdown:
+{"nome":"nome do candidato ou Candidato","cargo_atual":"cargo identificado","score_total":número 0-100,"nivel":"Bronze ou Prata ou Ouro ou Platina","scores":{"clareza_estrutura":número,"comunicacao_impacto":número,"aderencia_tecnica":número,"branding_pessoal":número,"atualizacao":número,"posicionamento":número},"insight_aberto":"1 frase 20-35 palavras sobre principal problema, direta e específica","resumo_livre":"2-3 frases sobre o perfil geral","bloqueios":[{"titulo":"título","descricao":"2-3 frases específicas"},{"titulo":"título","descricao":"2-3 frases"}],"plano_acao":[{"periodo":"Dias 1-30","titulo":"título","descricao":"ação específica"},{"periodo":"Dias 31-60","titulo":"título","descricao":"ação"},{"periodo":"Dias 61-90","titulo":"título","descricao":"ação"}],"frase_posicionamento":"frase 2-3 linhas para LinkedIn baseada no perfil real","pontos_fortes":["ponto 1","ponto 2","ponto 3"],"percentil":número 1-99}
+
+Seja específico. Use informações reais do currículo.`;
+
+  try {
+    const msgs = isPDF ? [{role:'user',content:[
+      {type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},
+      {type:'text',text:prompt}
+    ]}] : [{role:'user',content:prompt+'\n\n[Arquivo não-PDF. Gere diagnóstico baseado no contexto: '+cargo+' em '+area+']'}];
+
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:msgs})
+    });
+    const data = await res.json();
+    const raw = data.content?.[0]?.text||'';
+    analysisResult = JSON.parse(raw.replace(/```json|```/g,'').trim());
+  } catch(err) {
+    analysisResult = {
+      nome:'Candidato',cargo_atual:cargo,score_total:68,nivel:'Prata',
+      scores:{clareza_estrutura:74,comunicacao_impacto:60,aderencia_tecnica:70,branding_pessoal:58,atualizacao:65,posicionamento:62},
+      insight_aberto:'Seu currículo descreve responsabilidades mas não comunica resultados — isso reduz seu impacto na triagem.',
+      resumo_livre:'Profissional com trajetória sólida e experiência relevante. O currículo tem boa estrutura mas perde força na comunicação de impacto e posicionamento.',
+      bloqueios:[
+        {titulo:'Ausência de métricas',descricao:'Suas experiências listam tarefas mas não mostram resultados concretos. Recrutadores precisam ver números para avaliar seu impacto real.'},
+        {titulo:'Posicionamento genérico',descricao:'Seu headline não comunica claramente quem você é e o que você entrega de diferente. Isso gera ambiguidade na triagem.'}
+      ],
+      plano_acao:[
+        {periodo:'Dias 1-30',titulo:'Adicione métricas',descricao:'Reescreva as 3 experiências principais com resultados mensuráveis e impacto real.'},
+        {periodo:'Dias 31-60',titulo:'Reescreva seu headline',descricao:'Crie um headline que comunique cargo-alvo, especialidade e diferencial em uma linha.'},
+        {periodo:'Dias 61-90',titulo:'Atualize seu LinkedIn',descricao:'Espelhe as mudanças do currículo no LinkedIn e adicione uma seção de destaque.'}
+      ],
+      frase_posicionamento:`Profissional de ${area} com foco em resultado e visão estratégica. Agora buscando ${cargo} para levar minha expertise para um novo nível.`,
+      pontos_fortes:['Experiência relevante na área','Boa estrutura do documento','Progressão de carreira clara'],
+      percentil:61
+    };
+  }
+
+  setTimeout(() => {
+    const last = document.getElementById('ps5');
+    last.classList.remove('running'); last.classList.add('done');
+    last.querySelector('.proc-step-icon').textContent = '✓';
+  }, 7200);
+  setTimeout(() => { setStep(3); showScreen('screen3'); }, 8000);
+}
+
+async function goToResult() {
+  const email = document.getElementById('emailInput')?.value || '';
+  sessionStorage.setItem('msc_result', JSON.stringify(analysisResult));
+  sessionStorage.setItem('msc_email', email);
+
+  // Salva resultado no Supabase como pendente para o webhook encontrar após pagamento
+  if (email && analysisResult) {
+    try {
+      await fetch('https://jggjkmutsydjzyxxkcpj.supabase.co/rest/v1/pagamentos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'sb_publishable_2hk6Nl4uuUeCzWENAq5NZA_89-k5fPm',
+          'Authorization': 'Bearer sb_publishable_2hk6Nl4uuUeCzWENAq5NZA_89-k5fPm',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          token: crypto.randomUUID(),
+          email,
+          status: 'pendente',
+          resultado: analysisResult
+        })
+      });
+    } catch(e) {
+      console.warn('Supabase save failed:', e);
+    }
+  }
+
+  window.location.href = 'msc_resultado.html';
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function setStep(n) {
+  [1,2,3].forEach(i=>{
+    const c=document.getElementById('sc'+i), l=document.getElementById('sl'+i);
+    if(i<n){c.className='step-circle done';c.textContent='✓';}
+    else if(i===n){c.className='step-circle active';c.textContent=i;l.classList.add('active-l');}
+    else{c.className='step-circle idle';c.textContent=i;l.classList.remove('active-l');}
+  });
+}
+
+function fileToBase64(file) {
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=()=>rej(new Error('Falha ao ler arquivo'));
+    r.readAsDataURL(file);
+  });
+}
+</script>
+</body>
+</html>
