@@ -368,7 +368,7 @@ Seja específico. Use informações reais do currículo.`;
       {type:'text',text:prompt}
     ]}] : [{role:'user',content:prompt+'\n\n[Arquivo não-PDF. Gere diagnóstico baseado no contexto: '+cargo+' em '+area+']'}];
 
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
+    const res = await fetch('/api/analyze',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:msgs})
