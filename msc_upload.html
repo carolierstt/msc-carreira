@@ -178,15 +178,15 @@ input[type=file]{display:none}
     <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
       <div class="upload-icon" id="uploadIcon">📂</div>
       <div class="upload-title" id="uploadTitle">Clique para selecionar ou arraste aqui</div>
-      <div class="upload-sub" id="uploadSub">Seu currículo em formato digital — o arquivo que você usa para se candidatar</div>
+      <div class="upload-sub" id="uploadSub">Apenas Apenas PDF — no Word ou Google Docs: Arquivo → Salvar/Baixar como PDF</div>
       <div class="upload-types">
         <span class="upload-type">PDF</span>
-        <span class="upload-type">DOC</span>
-        <span class="upload-type">DOCX</span>
+        <span class="upload-type" style="background:rgba(255,107,107,.1);color:#FF6B6B;border-color:rgba(255,107,107,.3)">DOC não aceito</span>
+        <span class="upload-type" style="background:rgba(255,107,107,.1);color:#FF6B6B;border-color:rgba(255,107,107,.3)">DOCX não aceito</span>
         <span class="upload-type">até 5MB</span>
       </div>
     </div>
-    <input type="file" id="fileInput" accept=".pdf,.doc,.docx">
+    <input type="file" id="fileInput" accept=".pdf">
     <div class="file-selected" id="fileSelected">
       <div class="file-icon">📄</div>
       <div class="file-info">
@@ -292,10 +292,9 @@ uploadArea.addEventListener('drop', e => {
 });
 
 function handleFile(f) {
-  const ok = ['application/pdf','application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-  if(!ok.includes(f.type) && !f.name.match(/\.(pdf|doc|docx)$/i)) {
-    alert('Por favor, envie um arquivo PDF, DOC ou DOCX.'); return; }
+  const ok = ['application/pdf'];
+  if(!ok.includes(f.type) && !f.name.match(/\.pdf$/i)) {
+    alert('Por favor, envie seu currículo em formato PDF.\n\nDica: no Word, clique em Arquivo → Salvar Como → PDF.'); return; }
   if(f.size > 5*1024*1024) { alert('Arquivo muito grande. Máximo 5MB.'); return; }
   selectedFile = f;
   document.getElementById('fileName').textContent = f.name;
@@ -314,7 +313,7 @@ function removeFile(e) {
   uploadArea.classList.remove('has-file');
   document.getElementById('uploadIcon').textContent = '📂';
   document.getElementById('uploadTitle').textContent = 'Clique para selecionar ou arraste aqui';
-  document.getElementById('uploadSub').textContent = 'Seu currículo em formato digital — o arquivo que você usa para se candidatar';
+  document.getElementById('uploadSub').textContent = 'Apenas Apenas PDF — no Word ou Google Docs: Arquivo → Salvar/Baixar como PDF';
   checkReady();
 }
 
@@ -353,14 +352,143 @@ async function startAnalysis() {
   const nivel = document.getElementById('nivel').value;
   const obj   = document.getElementById('objetivo').value;
 
-  const prompt = `Você é especialista em recrutamento e carreira com 20 anos de experiência. Analise este currículo.
+  const prompt = `Você é um especialista sênior em recrutamento, seleção e desenvolvimento de carreira com mais de 20 anos de experiência. Você já avaliou mais de 50.000 currículos e conhece profundamente como os sistemas ATS (Applicant Tracking Systems) filtram candidatos antes de qualquer humano ver o perfil.
 
-CONTEXTO: Cargo-alvo: ${cargo} | Área: ${area} | Nível: ${nivel||'não informado'} | Objetivo: ${obj||'não informado'}
+CONTEXTO DO CANDIDATO:
+- Cargo-alvo: ${cargo}
+- Área: ${area}
+- Nível desejado: ${nivel||'não informado'}
+- Objetivo: ${obj||'não informado'}
 
-Retorne SOMENTE JSON válido, sem markdown:
-{"nome":"nome do candidato ou Candidato","cargo_atual":"cargo identificado","score_total":número 0-100,"nivel":"Bronze ou Prata ou Ouro ou Platina","scores":{"clareza_estrutura":número,"comunicacao_impacto":número,"aderencia_tecnica":número,"branding_pessoal":número,"atualizacao":número,"posicionamento":número},"insight_aberto":"1 frase 20-35 palavras sobre principal problema, direta e específica","resumo_livre":"2-3 frases sobre o perfil geral","bloqueios":[{"titulo":"título","descricao":"2-3 frases específicas"},{"titulo":"título","descricao":"2-3 frases"}],"plano_acao":[{"periodo":"Dias 1-30","titulo":"título","descricao":"ação específica"},{"periodo":"Dias 31-60","titulo":"título","descricao":"ação"},{"periodo":"Dias 61-90","titulo":"título","descricao":"ação"}],"frase_posicionamento":"frase 2-3 linhas para LinkedIn baseada no perfil real","pontos_fortes":["ponto 1","ponto 2","ponto 3"],"percentil":número 1-99}
+INSTRUÇÕES CRÍTICAS:
+1. Leia o currículo COMPLETO com atenção máxima antes de analisar
+2. Seja brutalmente honesto — análises genéricas não ajudam ninguém
+3. Use APENAS informações reais extraídas do currículo — não invente dados
+4. NUNCA mencione anos, datas ou períodos específicos para avaliar "atualização" — você não tem acesso à data atual
+5. Cada campo deve ser específico ao perfil desta pessoa, não genérico
+6. Os scores devem refletir a realidade — seja rigoroso, não generoso
 
-Seja específico. Use informações reais do currículo.`;
+CRITÉRIOS DE AVALIAÇÃO DETALHADOS:
+
+CLAREZA E ESTRUTURA (peso 1):
+- Hierarquia visual clara e escaneável em 6 segundos?
+- Formatação consistente e profissional?
+- Informações de contato completas e visíveis?
+- Seções bem organizadas e identificadas?
+- Extensão adequada ao nível de experiência?
+
+COMUNICAÇÃO DE IMPACTO (peso 2):
+- As experiências descrevem RESULTADOS ou apenas responsabilidades?
+- Uso de verbos de ação fortes e específicos?
+- Presença de métricas, números e percentuais concretos?
+- Cada cargo comunica o que foi gerado, não só o que foi feito?
+- A linguagem é ativa ou passiva?
+
+ADERÊNCIA TÉCNICA (peso 2):
+- As competências listadas correspondem ao cargo-alvo?
+- Há palavras-chave relevantes para a área que os ATS buscam?
+- As experiências são coerentes com o nível desejado?
+- Há lacunas ou inconsistências na trajetória?
+
+BRANDING PESSOAL (peso 3):
+- Existe um headline ou título profissional claro?
+- O resumo/objetivo comunica diferencial ou é genérico?
+- A narrativa do perfil é coesa e direcionada?
+- Fica claro o que essa pessoa faz de melhor?
+- LinkedIn ou portfólio mencionados?
+
+POSICIONAMENTO (peso 4):
+- Em 10 segundos, um recrutador entende quem é essa pessoa e o que busca?
+- O currículo é direcionado ao cargo-alvo ou é genérico para qualquer vaga?
+- Existe consistência entre headline, resumo e experiências?
+- O perfil se diferencia ou parece igual a qualquer outro candidato?
+
+ANÁLISE ATS:
+- O currículo passaria pelos filtros automáticos para o cargo-alvo?
+- Há palavras-chave críticas presentes ou ausentes?
+- A formatação é compatível com leitura por sistemas automáticos?
+
+COMPARAÇÃO COM O MERCADO:
+- O que perfis similares para este cargo costumam ter que este currículo não tem?
+- Quais competências, certificações ou experiências são esperadas para o nível desejado e estão ausentes?
+- O que este currículo tem de diferencial genuíno em relação a outros candidatos da mesma área?
+- Qual é o principal gap competitivo que pode estar custando oportunidades?
+
+AVALIAÇÃO DE DADOS PESSOAIS E FOTO:
+- O currículo inclui foto? Se sim, avalie se é recomendado para a área/cargo-alvo — em algumas áreas como tecnologia e finanças foto não é recomendada; em outras como vendas e atendimento pode ser positivo
+- Há informações desnecessárias como estado civil, RG, CPF, religião, filiação — que não agregam e podem gerar viés na triagem?
+- O endereço completo está presente? Para vagas presenciais é útil; para remotas é desnecessário
+- A idade ou data de nascimento está visível? Avalie se isso pode gerar viés para o cargo-alvo
+- Há redes sociais listadas? Se sim, são adequadas para o cargo (LinkedIn é sempre positivo; outras dependem da área)?
+
+Retorne SOMENTE JSON válido, sem markdown, sem texto antes ou depois:
+{
+  "nome": "nome completo extraído do currículo",
+  "cargo_atual": "último cargo ou cargo principal identificado",
+  "score_total": número de 0 a 100,
+  "nivel": "Bronze ou Prata ou Ouro ou Platina",
+  "scores": {
+    "clareza_estrutura": número de 0 a 100,
+    "comunicacao_impacto": número de 0 a 100,
+    "aderencia_tecnica": número de 0 a 100,
+    "branding_pessoal": número de 0 a 100,
+    "atualizacao": número de 0 a 100,
+    "posicionamento": número de 0 a 100
+  },
+  "insight_aberto": "1 frase de 25-40 palavras identificando o problema PRINCIPAL e ESPECÍFICO deste currículo — mencione algo concreto do currículo, não seja genérico",
+  "resumo_livre": "3-4 frases descrevendo honestamente o perfil: o que tem de bom, o que precisa melhorar e qual é o gap principal para o cargo-alvo",
+  "analise_ats": "2-3 frases específicas sobre como os sistemas ATS avaliariam este currículo para o cargo-alvo informado — mencione palavras-chave presentes ou ausentes",
+  "bloqueios": [
+    {
+      "titulo": "título curto e direto do bloqueio",
+      "descricao": "3-4 frases explicando especificamente o que está errado, por que isso prejudica, e o que acontece na prática quando o recrutador vê isso"
+    },
+    {
+      "titulo": "segundo bloqueio",
+      "descricao": "3-4 frases igualmente específicas"
+    },
+    {
+      "titulo": "terceiro bloqueio se houver",
+      "descricao": "3-4 frases igualmente específicas"
+    }
+  ],
+  "plano_acao": [
+    {
+      "periodo": "Dias 1–7",
+      "titulo": "ação de maior impacto imediato",
+      "descricao": "instrução detalhada e específica — diga exatamente o que fazer, como fazer e o que vai mudar"
+    },
+    {
+      "periodo": "Dias 8–30",
+      "titulo": "segunda ação prioritária",
+      "descricao": "instrução detalhada e específica"
+    },
+    {
+      "periodo": "Dias 31–60",
+      "titulo": "terceira ação para consolidar",
+      "descricao": "instrução detalhada e específica"
+    }
+  ],
+  "frase_posicionamento": "frase de 3-4 linhas pronta para usar no LinkedIn — deve mencionar a área de atuação, o diferencial real identificado no currículo e o cargo-alvo",
+  "pontos_fortes": [
+    "ponto forte específico 1 — mencione algo concreto do currículo",
+    "ponto forte específico 2",
+    "ponto forte específico 3",
+    "ponto forte específico 4 se houver"
+  ],
+  "percentil": número de 1 a 99,
+  "headline_sugerido": "headline profissional sugerido para o topo do currículo e LinkedIn — máximo 1 linha",
+  "comparacao_mercado": {
+    "o_que_falta": "2-3 frases sobre o que perfis similares costumam ter e este currículo não tem — seja específico para a área e nível",
+    "diferencial_real": "1-2 frases sobre o que este candidato tem de genuinamente diferente, se houver",
+    "gap_principal": "1 frase direta sobre o maior gap competitivo identificado"
+  },
+  "dados_pessoais": {
+    "foto": "avaliação sobre presença/ausência de foto e se é recomendado para este cargo-alvo",
+    "informacoes_desnecessarias": "lista de dados que devem ser removidos por não agregar ou gerar viés — ou 'Nenhum dado desnecessário identificado'",
+    "recomendacoes": "2-3 recomendações específicas sobre os dados pessoais presentes no currículo"
+  }
+}`;
 
   try {
     const msgs = isPDF ? [{role:'user',content:[
@@ -371,7 +499,7 @@ Seja específico. Use informações reais do currículo.`;
     const res = await fetch('/api/analyze',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,messages:msgs})
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:3000,messages:msgs})
     });
     const data = await res.json();
     const raw = data.content?.[0]?.text||'';

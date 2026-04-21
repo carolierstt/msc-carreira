@@ -489,6 +489,37 @@ function renderContent(isDemo) {
       </div>
     </div>
 
+    <!-- ANÁLISE ATS -->
+    <div class="block" style="animation-delay:.12s">
+      <div class="block-header">
+        <div class="block-icon" style="background:rgba(245,158,11,.1)">🤖</div>
+        <div>
+          <div class="block-title">Como os sistemas ATS veem seu currículo</div>
+          <div class="block-sub">Os robôs de triagem automática avaliam antes de qualquer humano</div>
+        </div>
+      </div>
+      <div class="insight-full" style="background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(255,107,107,.05));border-color:rgba(245,158,11,.2)">
+        <div class="insight-label" style="color:var(--amber)">✦ Análise ATS</div>
+        <div class="insight-text">${d.analise_ats || 'Análise ATS não disponível para este perfil.'}</div>
+      </div>
+    </div>
+
+    <!-- HEADLINE SUGERIDO -->
+    <div class="block" style="animation-delay:.13s">
+      <div class="block-header">
+        <div class="block-icon" style="background:rgba(14,165,233,.1)">🏷️</div>
+        <div>
+          <div class="block-title">Headline profissional sugerido</div>
+          <div class="block-sub">Use no topo do currículo e no LinkedIn</div>
+        </div>
+      </div>
+      <div style="background:rgba(14,165,233,.08);border:.5px solid rgba(14,165,233,.2);border-radius:12px;padding:16px;position:relative">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:8px">✦ Copie e use agora</div>
+        <div style="font-size:15px;color:var(--text);font-style:italic" id="headlineText">"${d.headline_sugerido || 'Headline não gerado — refaça a análise com PDF.'}"</div>
+        <button style="position:absolute;top:14px;right:14px;background:rgba(14,165,233,.15);border:.5px solid rgba(14,165,233,.25);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--teal);cursor:pointer" onclick="navigator.clipboard.writeText(document.getElementById('headlineText').textContent.replace(/['"]/g,'')).then(()=>this.textContent='✓ Copiado!')">Copiar</button>
+      </div>
+    </div>
+
     <!-- BLOQUEIOS -->
     <div class="block" style="animation-delay:.14s">
       <div class="block-header">
@@ -511,6 +542,36 @@ function renderContent(isDemo) {
         </div>
       </div>
       <div class="forte-list">${fortesHTML}</div>
+
+      <!-- DADOS PESSOAIS DENTRO DO BRANDING -->
+      ${d.dados_pessoais ? `
+      <div style="margin-top:16px;padding-top:14px;border-top:.5px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);margin-bottom:10px;display:flex;align-items:center;gap:6px">👤 Foto e dados pessoais — impacto no branding</div>
+        <div class="forte-list">
+          <div class="forte-item" style="align-items:flex-start">
+            <div class="forte-check" style="background:rgba(14,165,233,.15);color:var(--teal);margin-top:3px">📷</div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px">Foto</div>
+              <div style="font-size:12.5px;color:var(--muted);line-height:1.55">${d.dados_pessoais.foto}</div>
+            </div>
+          </div>
+          <div class="forte-item" style="align-items:flex-start;margin-top:8px">
+            <div class="forte-check" style="background:rgba(255,107,107,.15);color:var(--coral);margin-top:3px">⚠</div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px">Dados a remover ou revisar</div>
+              <div style="font-size:12.5px;color:var(--muted);line-height:1.55">${d.dados_pessoais.informacoes_desnecessarias}</div>
+            </div>
+          </div>
+          <div class="forte-item" style="align-items:flex-start;margin-top:8px">
+            <div class="forte-check" style="background:rgba(16,185,129,.15);color:var(--green);margin-top:3px">✓</div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px">Recomendações</div>
+              <div style="font-size:12.5px;color:var(--muted);line-height:1.55">${d.dados_pessoais.recomendacoes}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      ` : ''}
     </div>
 
     <!-- PLANO DE AÇÃO -->
@@ -539,6 +600,31 @@ function renderContent(isDemo) {
         <div class="frase-text" id="fraseText">"${d.frase_posicionamento}"</div>
         <button class="copy-btn" id="copyBtn" onclick="copyFrase()">Copiar</button>
       </div>
+    </div>
+
+    <!-- COMPARAÇÃO COM MERCADO -->
+    <div class="block" style="animation-delay:.28s">
+      <div class="block-header">
+        <div class="block-icon" style="background:rgba(124,58,237,.1)">📊</div>
+        <div>
+          <div class="block-title">Como você está em relação ao mercado</div>
+          <div class="block-sub">O que perfis similares têm que pode estar faltando</div>
+        </div>
+      </div>
+      ${d.comparacao_mercado ? `
+      <div class="bloqueio" style="background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(79,70,229,.04));border-color:rgba(124,58,237,.15)">
+        <div class="bloq-title" style="color:#a78bfa">O que perfis similares costumam ter</div>
+        <div class="bloq-desc">${d.comparacao_mercado.o_que_falta}</div>
+      </div>
+      <div class="bloqueio" style="margin-top:8px;background:linear-gradient(135deg,rgba(16,185,129,.06),rgba(14,165,233,.04));border-color:rgba(16,185,129,.15)">
+        <div class="bloq-title" style="color:#6ee7b7">Seu diferencial real</div>
+        <div class="bloq-desc">${d.comparacao_mercado.diferencial_real || 'Nenhum diferencial claro identificado — trabalhe o posicionamento.'}</div>
+      </div>
+      <div class="bloqueio" style="margin-top:8px;background:linear-gradient(135deg,rgba(255,107,107,.06),rgba(245,158,11,.04));border-color:rgba(255,107,107,.15)">
+        <div class="bloq-title" style="color:#fca5a5">Principal gap competitivo</div>
+        <div class="bloq-desc">${d.comparacao_mercado.gap_principal}</div>
+      </div>
+      ` : '<div style="font-size:13px;color:var(--muted)">Análise de mercado não disponível para este perfil.</div>'}
     </div>
 
     <!-- PRÓXIMOS PASSOS -->
@@ -571,6 +657,25 @@ function renderContent(isDemo) {
           <div class="next-desc">Reescreva uma experiência com métrica real. Leva 30 minutos e muda seu score.</div>
         </div>
       </div>
+    </div>
+
+    <!-- REENVIAR POR EMAIL -->
+    <div class="block" style="animation-delay:.32s;background:rgba(14,165,233,.03);border-color:rgba(14,165,233,.15)">
+      <div class="block-header">
+        <div class="block-icon" style="background:rgba(14,165,233,.1)">📧</div>
+        <div>
+          <div class="block-title">Receba este resultado por email</div>
+          <div class="block-sub">Para acessar novamente a qualquer momento</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input type="email" id="emailReenvio" placeholder="seu@email.com"
+          style="flex:1;min-width:200px;background:var(--surface2);border:.5px solid var(--border2);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text);font-family:inherit;outline:none">
+        <button onclick="enviarEmail()" style="padding:10px 20px;border-radius:10px;border:none;cursor:pointer;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;background:linear-gradient(135deg,var(--teal),var(--indigo));color:#fff;white-space:nowrap">
+          Enviar para meu email →
+        </button>
+      </div>
+      <div style="font-size:11px;color:var(--muted2);margin-top:8px">🔒 Usado apenas para enviar seu relatório. Sem spam.</div>
     </div>
 
     <!-- DOWNLOAD PDF -->
@@ -796,6 +901,21 @@ function downloadPDF() {
 // ══════════════════════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════════════════════
+async function enviarEmail() {
+  const email = document.getElementById('emailReenvio')?.value;
+  if (!email || !email.includes('@')) { alert('Por favor, informe um email válido.'); return; }
+  if (!resultData) { alert('Nenhum resultado para enviar.'); return; }
+  try {
+    await fetch(SUPABASE_URL + '/rest/v1/pagamentos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ token: crypto.randomUUID(), email, status: 'pago', resultado: resultData })
+    });
+    alert('✓ Salvo! Acesse novamente em:\nhttps://msc-carreira.vercel.app/msc_resultado_pago.html?email=' + encodeURIComponent(email));
+  } catch(e) { alert('Erro ao salvar. Tente novamente.'); }
+}
+
 verifyAccess();
 </script>
 </body>

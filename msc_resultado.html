@@ -322,34 +322,71 @@ ${isDemo ? `<div class="demo-banner anim">
 <div class="sec anim" style="animation-delay:.12s">
   <div class="sec-head">
     <div class="sec-title"><div class="sec-dot" style="background:linear-gradient(135deg,#10B981,#0EA5E9)"></div>Diagnóstico de carreira</div>
-    <div class="lock-tag">🔒 2 de 3 bloqueados</div>
+    <div class="lock-tag">🔒 parcialmente bloqueado</div>
   </div>
   <div class="insight-open">
     <div class="insight-label">✦ Insight desbloqueado</div>
     <div class="insight-text">${data.insight_aberto}</div>
   </div>
-  <div class="locked-list">
+  <div class="insight-open" style="margin-top:8px;background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(255,107,107,.05));border-color:rgba(245,158,11,.2)">
+    <div class="insight-label" style="color:var(--amber)">✦ Como os robôs ATS veem seu currículo</div>
+    <div class="insight-text">${data.analise_ats || 'Análise desbloqueada no diagnóstico completo.'}</div>
+  </div>
+  <div class="locked-list" style="margin-top:10px">
     <div class="locked-item" onclick="scrollToPaywall()">
-      <div class="li-icon">🎯</div>
+      <div class="li-icon">🧱</div>
       <div class="li-text">
-        <div class="li-title">Seus ${data.bloqueios?.length||2} principais bloqueios identificados</div>
-        <div class="li-sub">Com explicação do que está na raiz de cada um</div>
+        <div class="li-title">Bloqueio #1: <span style="color:var(--coral)">${data.bloqueios?.[0]?.titulo || 'identificado'}</span></div>
+        <div class="li-sub">Desbloqueie para ver a explicação completa e como corrigir</div>
+      </div>
+      <div class="li-lock">🔒</div>
+    </div>
+    <div class="locked-item" onclick="scrollToPaywall()">
+      <div class="li-icon">🧱</div>
+      <div class="li-text">
+        <div class="li-title">Bloqueio #2: <span style="color:var(--coral)">${data.bloqueios?.[1]?.titulo || 'identificado'}</span></div>
+        <div class="li-sub">Desbloqueie para ver a explicação completa e como corrigir</div>
       </div>
       <div class="li-lock">🔒</div>
     </div>
     <div class="locked-item" onclick="scrollToPaywall()">
       <div class="li-icon">🗺️</div>
       <div class="li-text">
-        <div class="li-title">Plano de ação personalizado — 90 dias</div>
-        <div class="li-sub">3 ações priorizadas por impacto e viabilidade real</div>
+        <div class="li-title">Plano de ação detalhado — do dia 1 ao dia 60</div>
+        <div class="li-sub">Instruções específicas para o seu perfil, não genéricas</div>
       </div>
       <div class="li-lock">🔒</div>
     </div>
     <div class="locked-item" onclick="scrollToPaywall()">
-      <div class="li-icon">💬</div>
+      <div class="li-icon">💡</div>
       <div class="li-text">
-        <div class="li-title">Sua frase de posicionamento profissional</div>
-        <div class="li-sub">Pronta para usar no LinkedIn e em entrevistas</div>
+        <div class="li-title">Headline sugerido para seu currículo e LinkedIn</div>
+        <div class="li-sub">Gerado especificamente para o seu perfil e cargo-alvo</div>
+      </div>
+      <div class="li-lock">🔒</div>
+    </div>
+    <div class="locked-item" onclick="scrollToPaywall()">
+      <div class="li-icon">✍️</div>
+      <div class="li-text">
+        <div class="li-title">Frase de posicionamento completa</div>
+        <div class="li-sub">3-4 linhas prontas para copiar no LinkedIn — do seu perfil real</div>
+      </div>
+      <div class="li-lock">🔒</div>
+    </div>
+    <div class="locked-item" onclick="scrollToPaywall()">
+      <div class="li-icon">📊</div>
+      <div class="li-text">
+        <div class="li-title">Como você está vs. o mercado — gap competitivo</div>
+        <div class="li-sub">O que perfis similares têm que este currículo não tem</div>
+      </div>
+      <div class="li-lock">🔒</div>
+    </div>
+
+    <div class="locked-item" onclick="scrollToPaywall()">
+      <div class="li-icon">📄</div>
+      <div class="li-text">
+        <div class="li-title">Relatório completo em PDF para baixar</div>
+        <div class="li-sub">Guarda e usa como guia durante toda sua busca</div>
       </div>
       <div class="li-lock">🔒</div>
     </div>
@@ -382,7 +419,7 @@ ${isDemo ? `<div class="demo-banner anim">
       <div class="li-icon">🏷️</div>
       <div class="li-text">
         <div class="li-title">Branding pessoal — ${sc.branding_pessoal}/100</div>
-        <div class="li-sub">Como você se diferencia dos outros candidatos</div>
+        <div class="li-sub">Inclui avaliação de foto e dados pessoais — o que pode gerar viés na triagem</div>
       </div>
       <div class="li-lock">🔒</div>
     </div>
