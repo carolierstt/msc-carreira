@@ -212,8 +212,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:14px 28px;
   <!-- VERIFICAÇÃO -->
   <div class="verify-screen active" id="verifyScreen">
     <div class="verify-spin"></div>
-    <div class="verify-title">Verificando seu acesso…</div>
-    <div class="verify-sub">Confirmando seu pagamento e carregando seu diagnóstico completo.</div>
+    <div class="verify-title" id="verifyTitle">Confirmando seu pagamento…</div>
+    <div class="verify-sub" id="verifySub">Estamos carregando seu diagnóstico completo. Isso pode levar alguns segundos.</div>
   </div>
 
   <!-- ACESSO NEGADO -->
@@ -289,46 +289,86 @@ let resultData = null;
 async function verifyAccess() {
   const params = new URLSearchParams(window.location.search);
   const token = params.get('token');
+  const email = params.get('email');
 
-  // Modo demo — acessível para visualizar sem pagamento
+  // Modo demo
   if (token === 'demo') {
     resultData = DEMO_DATA;
     showContent(true);
     return;
   }
 
-  // Sem token — tenta sessão local (vindo do fluxo normal + pagamento)
-  if (!token) {
-    const local = sessionStorage.getItem('msc_paid_result');
-    if (local) {
-      try {
-        resultData = JSON.parse(local);
+  // Busca por email (vindo do redirecionamento do Kiwify)
+  if (email) {
+    try {
+      // Aguarda até 10 segundos para o webhook processar
+      for (let i = 0; i < 5; i++) {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/pagamentos?email=eq.${encodeURIComponent(email)}&status=eq.pago&select=resultado&order=criado_em.desc&limit=1`,
+          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+        );
+        const rows = await res.json();
+        if (rows && rows.length > 0 && rows[0].resultado) {
+          resultData = rows[0].resultado;
+          showContent(false);
+          return;
+        }
+        // Aguarda 2 segundos antes de tentar novamente
+        await new Promise(r => setTimeout(r, 2000));
+      }
+
+      // Webhook pode ter atrasado — busca resultado pendente pelo email
+      const res2 = await fetch(
+        `${SUPABASE_URL}/rest/v1/pagamentos?email=eq.${encodeURIComponent(email)}&select=resultado&order=criado_em.desc&limit=1`,
+        { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+      );
+      const rows2 = await res2.json();
+      if (rows2 && rows2.length > 0 && rows2[0].resultado) {
+        resultData = rows2[0].resultado;
         showContent(false);
         return;
-      } catch(e) {}
+      }
+    } catch(e) {
+      console.warn('Supabase error:', e);
     }
+
+    // Fallback — sessionStorage
+    const local = sessionStorage.getItem('msc_result');
+    if (local) {
+      try { resultData = JSON.parse(local); showContent(false); return; } catch(e) {}
+    }
+
+    // Último recurso — demo com aviso
+    resultData = DEMO_DATA;
+    showContent(true);
+    return;
+  }
+
+  // Busca por token
+  if (token) {
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/pagamentos?token=eq.${token}&status=eq.pago&select=resultado`,
+        { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+      );
+      const rows = await res.json();
+      if (rows && rows.length > 0 && rows[0].resultado) {
+        resultData = rows[0].resultado;
+        showContent(false);
+        return;
+      }
+    } catch(e) {}
     showDenied();
     return;
   }
 
-  // Com token — verifica no Supabase
-  try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/pagamentos?token=eq.${token}&status=eq.pago&select=resultado`,
-      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
-    );
-    const rows = await res.json();
-    if (rows && rows.length > 0 && rows[0].resultado) {
-      resultData = rows[0].resultado;
-      showContent(false);
-    } else {
-      showDenied();
-    }
-  } catch(e) {
-    // Supabase não configurado ainda — mostra demo com aviso
-    resultData = DEMO_DATA;
-    showContent(true);
+  // Sem token e sem email — tenta sessionStorage
+  const local = sessionStorage.getItem('msc_result');
+  if (local) {
+    try { resultData = JSON.parse(local); showContent(false); return; } catch(e) {}
   }
+
+  showDenied();
 }
 
 function showDenied() {
