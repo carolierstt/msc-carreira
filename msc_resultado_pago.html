@@ -516,7 +516,7 @@ function renderContent(isDemo) {
       <div style="background:rgba(14,165,233,.08);border:.5px solid rgba(14,165,233,.2);border-radius:12px;padding:16px;position:relative">
         <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-bottom:8px">✦ Copie e use agora</div>
         <div style="font-size:15px;color:var(--text);font-style:italic" id="headlineText">"${d.headline_sugerido || 'Headline não gerado — refaça a análise com PDF.'}"</div>
-        <button style="position:absolute;top:14px;right:14px;background:rgba(14,165,233,.15);border:.5px solid rgba(14,165,233,.25);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--teal);cursor:pointer" onclick="navigator.clipboard.writeText(document.getElementById('headlineText').textContent.replace(/['"]/g,'')).then(()=>this.textContent='✓ Copiado!')">Copiar</button>
+        <button id="copyHeadlineBtn" style="position:absolute;top:14px;right:14px;background:rgba(14,165,233,.15);border:.5px solid rgba(14,165,233,.25);border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--teal);cursor:pointer" onclick="copyHeadline()">Copiar</button>
       </div>
     </div>
 
@@ -728,192 +728,465 @@ function downloadPDF() {
   const d = resultData;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-
-  const W = 210, M = 20;
+  const W = 210, M = 18;
   let y = 0;
 
-  function addPage() { doc.addPage(); y = 20; }
-  function checkY(need) { if (y + need > 270) addPage(); }
+  function newPage() { doc.addPage(); y = 22; }
+  function checkY(need) { if (y + need > 272) newPage(); }
 
-  // Função para texto com quebra de linha
-  function addText(text, x, size, color, maxW, style='normal') {
-    doc.setFontSize(size);
+  function heading(text, color) {
+    checkY(12);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(8);
     doc.setTextColor(...color);
-    doc.setFont('helvetica', style);
-    const lines = doc.splitTextToSize(String(text), maxW || (W - 2*M));
-    lines.forEach(line => {
-      checkY(size * 0.5);
-      doc.text(line, x, y);
-      y += size * 0.45;
-    });
-    return lines.length;
+    doc.text(text.toUpperCase(), M, y);
+    y += 6;
   }
 
-  // CAPA
-  doc.setFillColor(12, 12, 24);
-  doc.rect(0, 0, W, 297, 'F');
-  doc.setFillColor(124, 58, 237, 0.3);
-  doc.circle(W-20, 30, 60, 'F');
-  doc.setFillColor(255, 107, 107, 0.15);
-  doc.circle(20, 260, 50, 'F');
+  function title(text) {
+    checkY(10);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(16);
+    doc.setTextColor(242,242,255);
+    doc.text(text, M, y);
+    y += 9;
+  }
 
-  y = 40;
-  doc.setFont('helvetica','bold');
-  doc.setFontSize(9); doc.setTextColor(200,150,255);
-  doc.text('DIAGNÓSTICO COMPLETO DE CARREIRA', M, y); y += 12;
+  function body(text, color=[160,160,190]) {
+    checkY(6);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(...color);
+    const lines = doc.splitTextToSize(String(text || ''), W - 2*M);
+    lines.forEach(l => { checkY(5); doc.text(l, M, y); y += 5; });
+    y += 2;
+  }
 
-  doc.setFontSize(32); doc.setTextColor(242,242,255);
-  doc.text('MSC', M, y); y += 10;
+  function bold(text, color=[242,242,255]) {
+    checkY(6);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(10);
+    doc.setTextColor(...color);
+    const lines = doc.splitTextToSize(String(text || ''), W - 2*M);
+    lines.forEach(l => { checkY(5); doc.text(l, M, y); y += 5.5; });
+  }
 
-  doc.setFontSize(14); doc.setTextColor(180,180,220);
-  doc.text('Mapeando Sua Carreira', M, y); y += 20;
+  function divider() {
+    checkY(4);
+    doc.setDrawColor(40,40,60);
+    doc.line(M, y, W-M, y);
+    y += 6;
+  }
 
-  doc.setFontSize(22); doc.setTextColor(242,242,255);
-  doc.setFont('helvetica','bold');
-  doc.text(d.nome, M, y); y += 10;
+  function scoreBar(label, val) {
+    checkY(12);
+    const barW = W - 2*M - 35;
+    const col = val>=75?[16,185,129]:val>=55?[245,158,11]:[255,107,107];
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(160,160,190);
+    doc.text(label, M, y+3);
+    doc.setFillColor(35,35,55);
+    doc.roundedRect(M+70, y-1, barW, 5, 2, 2, 'F');
+    doc.setFillColor(...col);
+    doc.roundedRect(M+70, y-1, barW*(val/100), 5, 2, 2, 'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...col);
+    doc.text(String(val)+'/100', W-M, y+3, {align:'right'});
+    y += 11;
+  }
 
-  doc.setFontSize(13); doc.setTextColor(140,140,180);
-  doc.setFont('helvetica','normal');
-  doc.text(d.cargo_atual, M, y); y += 8;
+  function infoBox(title, text, bgColor, borderColor) {
+    checkY(20);
+    const lines = doc.splitTextToSize(String(text || ''), W - 2*M - 8);
+    const h = lines.length * 5 + 14;
+    doc.setFillColor(...bgColor);
+    doc.roundedRect(M, y, W-2*M, h, 4, 4, 'F');
+    doc.setDrawColor(...borderColor);
+    doc.line(M, y, M, y+h);
+    doc.line(M+1, y, M+1, y+h);
+    doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...borderColor);
+    doc.text(title, M+5, y+7);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(180,180,210);
+    lines.forEach((l,i) => doc.text(l, M+5, y+13+i*5));
+    y += h + 6;
+  }
 
-  doc.setFontSize(11); doc.setTextColor(100,100,140);
-  doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, M, y);
-
-  // Score na capa
-  y = 180;
-  doc.setFillColor(30,28,50);
-  doc.roundedRect(M, y, W-2*M, 55, 8, 8, 'F');
-
-  doc.setFontSize(40); doc.setTextColor(255,107,107);
-  doc.setFont('helvetica','bold');
-  doc.text(String(d.score_total), M+10, y+30);
-
-  doc.setFontSize(12); doc.setTextColor(180,180,220);
-  doc.text(`Nível ${d.nivel}`, M+10, y+42);
-
-  doc.setFontSize(11); doc.setTextColor(120,120,160);
-  doc.setFont('helvetica','normal');
-  doc.text(`Você está acima de ${d.percentil}% dos perfis`, M+10, y+52);
-
-  // PÁGINA 2 — SCORES
-  addPage();
+  // ── CAPA ─────────────────────────────────────────────────────────────
   doc.setFillColor(12,12,24);
   doc.rect(0,0,W,297,'F');
+  doc.setFillColor(124,58,237,0.2);
+  doc.ellipse(W+10, 30, 80, 80, 'F');
+  doc.setFillColor(255,107,107,0.1);
+  doc.ellipse(-10, 260, 70, 70, 'F');
 
-  doc.setFontSize(8); doc.setTextColor(160,100,255); doc.setFont('helvetica','bold');
-  doc.text('ANÁLISE DO CURRÍCULO', M, y); y += 8;
+  y = 38;
+  doc.setFont('helvetica','bold'); doc.setFontSize(8);
+  doc.setTextColor(160,100,255);
+  doc.text('DIAGNÓSTICO COMPLETO DE CARREIRA', M, y); y += 14;
 
-  doc.setFontSize(18); doc.setTextColor(242,242,255);
-  doc.text('Score em 6 dimensões', M, y); y += 12;
+  doc.setFont('helvetica','bold'); doc.setFontSize(30);
+  doc.setTextColor(242,242,255);
+  const nome = (d.nome || 'Candidato').split(' ')[0];
+  doc.text(nome + ',', M, y); y += 10;
+  doc.setFont('helvetica','bold'); doc.setFontSize(20);
+  doc.setTextColor(200,180,255);
+  doc.text('aqui está tudo.', M, y); y += 14;
 
-  const scoreKeys = Object.keys(d.scores);
-  scoreKeys.forEach(k => {
-    const val = d.scores[k];
-    const label = {
-      clareza_estrutura:'Clareza e estrutura', comunicacao_impacto:'Comunicação de impacto',
-      aderencia_tecnica:'Aderência técnica', branding_pessoal:'Branding pessoal',
-      atualizacao:'Atualização profissional', posicionamento:'Posicionamento'
-    }[k] || k;
-    checkY(14);
-    doc.setFontSize(10); doc.setTextColor(180,180,220); doc.setFont('helvetica','normal');
-    doc.text(label, M, y);
-    doc.setFont('helvetica','bold');
-    const col = val>=75?[16,185,129]:val>=55?[245,158,11]:[255,107,107];
-    doc.setTextColor(...col);
-    doc.text(String(val)+'/100', W-M-20, y);
-    // barra
-    const barY = y+2; const barW = W-2*M-30;
-    doc.setFillColor(40,38,60);
-    doc.roundedRect(M, barY, barW, 4, 2, 2, 'F');
-    doc.setFillColor(...col);
-    doc.roundedRect(M, barY, barW*(val/100), 4, 2, 2, 'F');
-    y += 14;
-  });
+  doc.setFont('helvetica','normal'); doc.setFontSize(11);
+  doc.setTextColor(120,120,160);
+  doc.text(d.cargo_atual || '', M, y); y += 6;
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.setTextColor(80,80,110);
+  doc.text('Diagnóstico gerado por MSC — Mapeando Sua Carreira', M, y);
 
-  y += 6;
-  doc.setFontSize(8); doc.setTextColor(160,100,255); doc.setFont('helvetica','bold');
-  doc.text('DIAGNÓSTICO', M, y); y += 8;
-  doc.setFontSize(12); doc.setTextColor(180,180,220); doc.setFont('helvetica','normal');
-  const dLines = doc.splitTextToSize(d.insight_aberto, W-2*M);
-  dLines.forEach(l => { checkY(6); doc.text(l,M,y); y+=6; });
+  // Score na capa
+  y = 185;
+  doc.setFillColor(22,20,42);
+  doc.roundedRect(M, y, W-2*M, 62, 6, 6, 'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(44);
+  doc.setTextColor(255,107,107);
+  doc.text(String(d.score_total || 0), M+10, y+32);
+  doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  doc.setTextColor(200,180,255);
+  doc.text('Nível ' + (d.nivel || 'Prata'), M+10, y+44);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.setTextColor(100,100,140);
+  doc.text('Você está acima de ' + (d.percentil||60) + '% dos perfis na sua área', M+10, y+55);
 
-  // PÁGINA 3 — BLOQUEIOS
-  addPage();
+  // ── PÁG 2: SCORE COMPLETO ────────────────────────────────────────────
+  newPage();
   doc.setFillColor(12,12,24); doc.rect(0,0,W,297,'F');
-  doc.setFontSize(8); doc.setTextColor(255,107,107); doc.setFont('helvetica','bold');
-  doc.text('BLOQUEIOS IDENTIFICADOS', M, y); y += 10;
 
+  heading('Análise do Currículo — Score em 6 Dimensões', [160,100,255]);
+  title('Resultado detalhado');
+  body(d.resumo_livre);
+  divider();
+
+  const sc = d.scores || {};
+  const labels = {
+    clareza_estrutura:'Clareza e estrutura',
+    comunicacao_impacto:'Comunicação de impacto',
+    aderencia_tecnica:'Aderência técnica',
+    branding_pessoal:'Branding pessoal',
+    atualizacao:'Atualização profissional',
+    posicionamento:'Posicionamento'
+  };
+  Object.entries(labels).forEach(([k,l]) => scoreBar(l, sc[k]||0));
+
+  y += 4;
+  heading('Diagnóstico Principal', [100,200,255]);
+  body(d.insight_aberto, [200,200,230]);
+
+  // ── PÁG 3: ATS + HEADLINE + BLOQUEIOS ───────────────────────────────
+  newPage();
+  doc.setFillColor(12,12,24); doc.rect(0,0,W,297,'F');
+
+  heading('Análise ATS — Como os Robôs Veem seu Currículo', [245,158,11]);
+  title('Sistemas automáticos de triagem');
+  body(d.analise_ats || 'Análise ATS não disponível.');
+  divider();
+
+  heading('Headline Profissional Sugerido', [100,200,255]);
+  infoBox('Use no topo do currículo e no LinkedIn',
+    d.headline_sugerido || 'Headline não gerado.',
+    [18,22,45], [100,180,255]);
+
+  heading('Seus Principais Bloqueios', [255,107,107]);
+  title('O que está te travando');
   (d.bloqueios||[]).forEach((b,i) => {
     checkY(30);
-    doc.setFillColor(40,20,20);
-    const bh = 10 + doc.splitTextToSize(b.descricao,W-2*M-16).length*5;
-    doc.roundedRect(M, y, W-2*M, bh+10, 6, 6, 'F');
-    doc.setFontSize(9); doc.setTextColor(255,107,107); doc.setFont('helvetica','bold');
-    doc.text(`${i+1}. ${b.titulo}`, M+6, y+8);
-    doc.setFontSize(9.5); doc.setTextColor(180,180,200); doc.setFont('helvetica','normal');
-    const dsc = doc.splitTextToSize(b.descricao, W-2*M-12);
-    dsc.forEach((l,li) => { doc.text(l, M+6, y+16+li*5); });
-    y += bh + 16;
+    bold(`${i+1}. ${b.titulo}`, [255,150,150]);
+    body(b.descricao);
+    y += 2;
   });
 
-  // PÁGINA 4 — PLANO + FRASE
-  addPage();
+  // ── PÁG 4: PONTOS FORTES + DADOS PESSOAIS ───────────────────────────
+  newPage();
   doc.setFillColor(12,12,24); doc.rect(0,0,W,297,'F');
-  doc.setFontSize(8); doc.setTextColor(100,200,255); doc.setFont('helvetica','bold');
-  doc.text('PLANO DE AÇÃO — 90 DIAS', M, y); y += 10;
 
-  (d.plano_acao||[]).forEach((p,i) => {
-    checkY(24);
-    const cols = [[160,100,255],[100,200,255],[100,230,180]];
-    doc.setFontSize(8); doc.setTextColor(...cols[i]||cols[2]); doc.setFont('helvetica','bold');
-    doc.text(p.periodo, M, y); y += 6;
-    doc.setFontSize(11); doc.setTextColor(242,242,255);
-    doc.text(p.titulo, M, y); y += 6;
-    doc.setFontSize(9.5); doc.setTextColor(160,160,200); doc.setFont('helvetica','normal');
-    const plines = doc.splitTextToSize(p.descricao, W-2*M);
-    plines.forEach(l => { checkY(5); doc.text(l,M,y); y+=5; });
-    y += 8;
+  heading('Pontos Fortes', [100,230,180]);
+  title('O que já está funcionando a seu favor');
+  (d.pontos_fortes||[]).forEach((p,i) => {
+    checkY(8);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+    doc.setTextColor(100,230,180);
+    doc.text('✓', M, y+1);
+    doc.setTextColor(180,180,210);
+    const lines = doc.splitTextToSize(p, W-2*M-8);
+    lines.forEach(l => { checkY(5); doc.text(l, M+6, y); y+=5; });
+    y += 2;
   });
 
-  checkY(40);
-  doc.setFontSize(8); doc.setTextColor(160,100,255); doc.setFont('helvetica','bold');
-  doc.text('FRASE DE POSICIONAMENTO', M, y); y += 8;
-  doc.setFillColor(25,22,45);
-  const fLines = doc.splitTextToSize(`"${d.frase_posicionamento}"`, W-2*M-12);
-  const fH = fLines.length*6+16;
-  doc.roundedRect(M, y, W-2*M, fH, 6, 6, 'F');
-  doc.setFontSize(10); doc.setTextColor(180,160,255); doc.setFont('helvetica','italic');
-  fLines.forEach((l,i) => { doc.text(l, M+6, y+10+i*6); });
-  y += fH + 8;
+  divider();
 
-  // RODAPÉ
-  const pages = doc.getNumberOfPages();
-  for(let i=1;i<=pages;i++) {
-    doc.setPage(i);
-    doc.setFontSize(8); doc.setTextColor(60,60,80);
-    doc.text(`MSC — Mapeando Sua Carreira · Diagnóstico Completo · ${new Date().getFullYear()}`, M, 290);
-    doc.text(`Pág. ${i}/${pages}`, W-M-10, 290);
+  if (d.dados_pessoais) {
+    heading('Foto e Dados Pessoais — Impacto no Branding', [245,158,11]);
+    title('O que pode gerar viés na triagem');
+    bold('Foto:', [245,180,100]);
+    body(d.dados_pessoais.foto);
+    bold('Dados a remover ou revisar:', [255,150,150]);
+    body(d.dados_pessoais.informacoes_desnecessarias);
+    bold('Recomendações:', [100,230,180]);
+    body(d.dados_pessoais.recomendacoes);
+    divider();
   }
 
-  doc.save(`MSC_Diagnostico_${d.nome.replace(/\s/g,'_')}.pdf`);
+  // ── PÁG 5: COMPARAÇÃO COM MERCADO ───────────────────────────────────
+  if (d.comparacao_mercado) {
+    checkY(60);
+    if (y > 100) { newPage(); doc.setFillColor(12,12,24); doc.rect(0,0,W,297,'F'); }
+
+    heading('Comparação com o Mercado', [160,100,255]);
+    title('Como você está em relação a perfis similares');
+
+    infoBox('O que perfis similares costumam ter',
+      d.comparacao_mercado.o_que_falta || '',
+      [20,15,40], [160,100,255]);
+
+    infoBox('Seu diferencial real',
+      d.comparacao_mercado.diferencial_real || 'Nenhum diferencial claro identificado.',
+      [12,35,25], [100,230,180]);
+
+    infoBox('Principal gap competitivo',
+      d.comparacao_mercado.gap_principal || '',
+      [35,15,15], [255,107,107]);
+  }
+
+  // ── PÁG 6: PLANO DE AÇÃO + FRASE ────────────────────────────────────
+  newPage();
+  doc.setFillColor(12,12,24); doc.rect(0,0,W,297,'F');
+
+  heading('Plano de Ação', [100,200,255]);
+  title('Do Dia 1 ao Dia 60');
+
+  const periodColors = [[160,100,255],[100,200,255],[100,230,180]];
+  (d.plano_acao||[]).forEach((p,i) => {
+    checkY(35);
+    const col = periodColors[i] || [160,160,200];
+    doc.setFont('helvetica','bold'); doc.setFontSize(8);
+    doc.setTextColor(...col);
+    doc.text(p.periodo.toUpperCase(), M, y); y += 6;
+    bold(p.titulo, [242,242,255]);
+    body(p.descricao);
+    y += 3;
+  });
+
+  divider();
+
+  heading('Frase de Posicionamento', [160,100,255]);
+  title('Pronta para usar no LinkedIn');
+  checkY(35);
+  const frLines = doc.splitTextToSize('"' + (d.frase_posicionamento||'') + '"', W-2*M-8);
+  const frH = frLines.length * 5 + 14;
+  doc.setFillColor(20,15,40);
+  doc.roundedRect(M, y, W-2*M, frH, 4, 4, 'F');
+  doc.setDrawColor(124,58,237);
+  doc.line(M, y, M, y+frH); doc.line(M+1, y, M+1, y+frH);
+  doc.setFont('helvetica','italic'); doc.setFontSize(9.5); doc.setTextColor(180,160,255);
+  frLines.forEach((l,i) => doc.text(l, M+5, y+9+i*5));
+  y += frH + 8;
+
+  // ── RODAPÉ EM TODAS AS PÁGINAS ───────────────────────────────────────
+  const total = doc.getNumberOfPages();
+  for (let i=1; i<=total; i++) {
+    doc.setPage(i);
+    doc.setFillColor(18,16,32);
+    doc.rect(0,285,W,12,'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+    doc.setTextColor(60,60,90);
+    doc.text('MSC — Mapeando Sua Carreira · Diagnóstico Completo de Carreira', M, 291);
+    doc.text('Pág. '+i+'/'+total, W-M, 291, {align:'right'});
+  }
+
+  const filename = 'MSC_Diagnostico_' + (d.nome||'Candidato').replace(/\s+/g,'_') + '.pdf';
+  doc.save(filename);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════════════════════
+function copyHeadline() {
+  const el = document.getElementById('headlineText');
+  if (!el) return;
+  const txt = el.textContent.replace(/['"«»]/g, '').trim();
+  navigator.clipboard.writeText(txt).then(() => {
+    const btn = document.getElementById('copyHeadlineBtn');
+    if (btn) {
+      btn.textContent = '✓ Copiado!';
+      btn.style.background = 'rgba(16,185,129,.15)';
+      btn.style.borderColor = 'rgba(16,185,129,.25)';
+      btn.style.color = 'var(--green)';
+      setTimeout(() => {
+        btn.textContent = 'Copiar';
+        btn.style.background = 'rgba(14,165,233,.15)';
+        btn.style.borderColor = 'rgba(14,165,233,.25)';
+        btn.style.color = 'var(--teal)';
+      }, 2500);
+    }
+  }).catch(() => {
+    // Fallback para browsers sem clipboard API
+    const range = document.createRange();
+    range.selectNode(el);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.execCommand('copy');
+    window.getSelection().removeAllRanges();
+    const btn = document.getElementById('copyHeadlineBtn');
+    if (btn) { btn.textContent = '✓ Copiado!'; setTimeout(() => btn.textContent = 'Copiar', 2500); }
+  });
+}
+
 async function enviarEmail() {
   const email = document.getElementById('emailReenvio')?.value;
-  if (!email || !email.includes('@')) { alert('Por favor, informe um email válido.'); return; }
-  if (!resultData) { alert('Nenhum resultado para enviar.'); return; }
+  if (!email || !email.includes('@')) {
+    showEmailMsg('Por favor, informe um email válido.', 'error'); return;
+  }
+  if (!resultData) {
+    showEmailMsg('Nenhum resultado disponível.', 'error'); return;
+  }
+
+  const btn = document.querySelector('[onclick="enviarEmail()"]');
+  if (btn) { btn.textContent = 'Enviando...'; btn.disabled = true; }
+
   try {
+    // Gera PDF em base64 para anexar no email
+    const { jsPDF } = window.jspdf;
+    const pdfBase64 = await getPDFBase64();
+
+    // Salva no Supabase
     await fetch(SUPABASE_URL + '/rest/v1/pagamentos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY,
         'Authorization': 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' },
       body: JSON.stringify({ token: crypto.randomUUID(), email, status: 'pago', resultado: resultData })
     });
-    alert('✓ Salvo! Acesse novamente em:\nhttps://msc-carreira.vercel.app/msc_resultado_pago.html?email=' + encodeURIComponent(email));
-  } catch(e) { alert('Erro ao salvar. Tente novamente.'); }
+
+    // Envia email com PDF anexado
+    const res = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        nome: resultData.nome,
+        pdfBase64,
+        score: resultData.score_total,
+        nivel: resultData.nivel
+      })
+    });
+
+    if (res.ok) {
+      showEmailMsg('✓ Email enviado com sucesso! Verifique sua caixa de entrada (e spam).', 'success');
+    } else {
+      // Email falhou mas salvou no Supabase — mostra link de reacesso
+      const link = 'https://msc-carreira.vercel.app/msc_resultado_pago.html?email=' + encodeURIComponent(email);
+      showEmailMsg('✓ Salvo! Acesse novamente pelo link: <a href="' + link + '" style="color:#0EA5E9">' + link + '</a>', 'success');
+    }
+  } catch(e) {
+    showEmailMsg('Erro ao enviar. Tente novamente.', 'error');
+  } finally {
+    if (btn) { btn.textContent = 'Enviar para meu email →'; btn.disabled = false; }
+  }
+}
+
+function showEmailMsg(html, type) {
+  const wrap = document.getElementById('emailReenvio')?.closest('.block');
+  if (!wrap) return;
+  let el = document.getElementById('emailMsg');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'emailMsg';
+    wrap.appendChild(el);
+  }
+  const isSuccess = type === 'success';
+  el.style.cssText = 'margin-top:10px;padding:10px 14px;border-radius:8px;font-size:12.5px;line-height:1.6;' +
+    (isSuccess
+      ? 'background:rgba(16,185,129,.1);border:.5px solid rgba(16,185,129,.25);color:#6ee7b7'
+      : 'background:rgba(255,107,107,.1);border:.5px solid rgba(255,107,107,.25);color:#fca5a5');
+  el.innerHTML = html;
+}
+
+async function getPDFBase64() {
+  return new Promise((resolve) => {
+    try {
+      const d = resultData;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+      // Versão simplificada para email — conteúdo completo em texto
+      const W = 210, M = 18;
+      let y = 22;
+      doc.setFillColor(12,12,24); doc.rect(0,0,W,297,'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(18); doc.setTextColor(242,242,255);
+      doc.text('MSC — Diagnóstico Completo', M, y); y += 10;
+      doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(160,160,200);
+      doc.text(d.nome || 'Candidato', M, y); y += 7;
+      doc.setFontSize(9); doc.setTextColor(100,100,140);
+      doc.text('Para o diagnóstico completo e interativo, acesse:', M, y); y += 5;
+      const link = 'https://msc-carreira.vercel.app/msc_resultado_pago.html?email=' + encodeURIComponent(document.getElementById('emailReenvio')?.value || '');
+      doc.setTextColor(124,58,237);
+      doc.text(link, M, y); y += 12;
+
+      // Score
+      doc.setFont('helvetica','bold'); doc.setFontSize(28); doc.setTextColor(255,107,107);
+      doc.text(String(d.score_total || 0), M, y); y += 8;
+      doc.setFontSize(10); doc.setTextColor(200,180,255);
+      doc.text('Nível ' + (d.nivel||'Prata') + ' — acima de ' + (d.percentil||60) + '% dos perfis', M, y); y += 10;
+
+      // Resumo
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(160,160,190);
+      const resumo = doc.splitTextToSize(d.resumo_livre || '', W-2*M);
+      resumo.forEach(l => { doc.text(l, M, y); y += 5; }); y += 4;
+
+      // Scores
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(160,100,255);
+      doc.text('SCORES', M, y); y += 6;
+      const sc = d.scores || {};
+      const lbs = ['Clareza e estrutura','Comunicação de impacto','Aderência técnica','Branding pessoal','Atualização profissional','Posicionamento'];
+      const keys = ['clareza_estrutura','comunicacao_impacto','aderencia_tecnica','branding_pessoal','atualizacao','posicionamento'];
+      keys.forEach((k,i) => {
+        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(160,160,190);
+        doc.text(lbs[i] + ': ' + (sc[k]||0) + '/100', M, y); y += 5;
+      }); y += 4;
+
+      // Bloqueios
+      if (y > 220) { doc.addPage(); doc.setFillColor(12,12,24); doc.rect(0,0,W,297,'F'); y = 22; }
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(255,107,107);
+      doc.text('BLOQUEIOS IDENTIFICADOS', M, y); y += 6;
+      (d.bloqueios||[]).forEach((b,i) => {
+        doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(255,150,150);
+        doc.text((i+1)+'. '+b.titulo, M, y); y += 5;
+        doc.setFont('helvetica','normal'); doc.setTextColor(160,160,190);
+        const bl = doc.splitTextToSize(b.descricao||'', W-2*M);
+        bl.forEach(l => { if(y>270){doc.addPage();doc.setFillColor(12,12,24);doc.rect(0,0,W,297,'F');y=22;} doc.text(l,M,y); y+=5; }); y+=3;
+      });
+
+      // Plano
+      if (y > 220) { doc.addPage(); doc.setFillColor(12,12,24); doc.rect(0,0,W,297,'F'); y = 22; }
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(100,200,255);
+      doc.text('PLANO DE AÇÃO', M, y); y += 6;
+      (d.plano_acao||[]).forEach(p => {
+        doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(100,200,255);
+        doc.text(p.periodo, M, y); y += 5;
+        doc.setFont('helvetica','bold'); doc.setTextColor(242,242,255);
+        doc.text(p.titulo, M, y); y += 5;
+        doc.setFont('helvetica','normal'); doc.setTextColor(160,160,190);
+        const pl = doc.splitTextToSize(p.descricao||'', W-2*M);
+        pl.forEach(l => { if(y>270){doc.addPage();doc.setFillColor(12,12,24);doc.rect(0,0,W,297,'F');y=22;} doc.text(l,M,y); y+=5; }); y+=4;
+      });
+
+      // Frase
+      if (y > 240) { doc.addPage(); doc.setFillColor(12,12,24); doc.rect(0,0,W,297,'F'); y = 22; }
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(160,100,255);
+      doc.text('FRASE DE POSICIONAMENTO', M, y); y += 6;
+      doc.setFont('helvetica','italic'); doc.setFontSize(9); doc.setTextColor(180,160,255);
+      const fl = doc.splitTextToSize('"'+(d.frase_posicionamento||'')+'"', W-2*M);
+      fl.forEach(l => { doc.text(l,M,y); y+=5; });
+
+      const pdfData = doc.output('datauristring');
+      const base64 = pdfData.split(',')[1];
+      resolve(base64);
+    } catch(e) {
+      console.error('PDF base64 error:', e);
+      resolve('');
+    }
+  });
 }
 
 verifyAccess();
